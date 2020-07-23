@@ -550,7 +550,7 @@ def add_emr_bootstrap_opts(opt_group):
         opt_group.add_option(
             '--bootstrap-cmd', dest='bootstrap_cmds', action='append',
             default=[],
-            help=('Commands to run on the master node to set up libraries,'
+            help=('Commands to run on the main node to set up libraries,'
                   ' etc. You can use --bootstrap-cmd more than once. Use'
                   ' mrjob.conf to specify arguments as a list to be run'
                   ' directly.')),
@@ -558,7 +558,7 @@ def add_emr_bootstrap_opts(opt_group):
         opt_group.add_option(
             '--bootstrap-file', dest='bootstrap_files', action='append',
             default=[],
-            help=('File to upload to the master node before running'
+            help=('File to upload to the main node before running'
                   ' bootstrap_cmds (for example, debian packages). These will'
                   ' be made public on S3 due to a limitation of the bootstrap'
                   ' feature. You can use --bootstrap-file more than once.')),
@@ -581,7 +581,7 @@ def add_emr_bootstrap_opts(opt_group):
         opt_group.add_option(
             '--bootstrap-script', dest='bootstrap_scripts', action='append',
             default=[],
-            help=('Script to upload and then run on the master node (a'
+            help=('Script to upload and then run on the main node (a'
                   ' combination of bootstrap_cmds and bootstrap_files). These'
                   ' are run after the command from bootstrap_cmds. You can use'
                   ' --bootstrap-script more than once.')),
@@ -613,9 +613,9 @@ def add_emr_instance_opts(opt_group):
 
         # instance types
         opt_group.add_option(
-            '--ec2-core-instance-type', '--ec2-slave-instance-type',
+            '--ec2-core-instance-type', '--ec2-subordinate-instance-type',
             dest='ec2_core_instance_type', default=None,
-            help='Type of EC2 instance for core (or "slave") nodes only'),
+            help='Type of EC2 instance for core (or "subordinate") nodes only'),
 
         opt_group.add_option(
             '--ec2-instance-type', dest='ec2_instance_type', default=None,
@@ -625,9 +625,9 @@ def add_emr_instance_opts(opt_group):
                   ' list.')),
 
         opt_group.add_option(
-            '--ec2-master-instance-type', dest='ec2_master_instance_type',
+            '--ec2-main-instance-type', dest='ec2_main_instance_type',
             default=None,
-            help='Type of EC2 instance for master node only'),
+            help='Type of EC2 instance for main node only'),
 
         opt_group.add_option(
             '--ec2-task-instance-type', dest='ec2_task_instance_type',
@@ -640,14 +640,14 @@ def add_emr_instance_opts(opt_group):
             type='int',
             help='Total number of EC2 instances to launch '),
 
-        # NB: EMR instance counts are only applicable for slave/core and
-        # task, since a master count > 1 causes the EMR API to return the
-        # ValidationError "A master instance group must specify a single
+        # NB: EMR instance counts are only applicable for subordinate/core and
+        # task, since a main count > 1 causes the EMR API to return the
+        # ValidationError "A main instance group must specify a single
         # instance".
         opt_group.add_option(
             '--num-ec2-core-instances', dest='num_ec2_core_instances',
             default=None, type='int',
-            help=('Number of EC2 instances to start as core (or "slave") '
+            help=('Number of EC2 instances to start as core (or "subordinate") '
                   'nodes. Incompatible with --num-ec2-instances.')),
 
         opt_group.add_option(
@@ -661,16 +661,16 @@ def add_emr_instance_opts(opt_group):
             '--ec2-core-instance-bid-price',
             dest='ec2_core_instance_bid_price', default=None,
             help=(
-                'Bid price to specify for core (or "slave") nodes when'
+                'Bid price to specify for core (or "subordinate") nodes when'
                 ' setting them up as EC2 spot instances (you probably only'
                 ' want to set a bid price for task instances).')
         ),
 
         opt_group.add_option(
-            '--ec2-master-instance-bid-price',
-            dest='ec2_master_instance_bid_price', default=None,
+            '--ec2-main-instance-bid-price',
+            dest='ec2_main_instance_bid_price', default=None,
             help=(
-                'Bid price to specify for the master node when setting it up '
+                'Bid price to specify for the main node when setting it up '
                 'as an EC2 spot instance (you probably only want to set '
                 'a bid price for task instances).')
         ),

@@ -33,121 +33,121 @@ class SSHFSTestCase(MockSubprocessTestCase):
         self.mock_popen(ssh, mock_ssh_main, self.env)
 
     def set_up_mock_ssh(self):
-        self.master_ssh_root = self.makedirs('testmaster')
+        self.main_ssh_root = self.makedirs('testmain')
         self.env = dict(
             MOCK_SSH_VERIFY_KEY_FILE='true',
-            MOCK_SSH_ROOTS='testmaster=%s' % self.master_ssh_root,
+            MOCK_SSH_ROOTS='testmain=%s' % self.main_ssh_root,
         )
-        self.ssh_slave_roots = []
+        self.ssh_subordinate_roots = []
 
-        self.addCleanup(self.teardown_ssh, self.master_ssh_root)
+        self.addCleanup(self.teardown_ssh, self.main_ssh_root)
 
-    def teardown_ssh(self, master_ssh_root):
-        shutil.rmtree(master_ssh_root)
-        for path in self.ssh_slave_roots:
+    def teardown_ssh(self, main_ssh_root):
+        shutil.rmtree(main_ssh_root)
+        for path in self.ssh_subordinate_roots:
             shutil.rmtree(path)
 
-    def add_slave(self):
-        slave_num = len(self.ssh_slave_roots) + 1
-        new_dir = self.makedirs('testslave%d' % slave_num)
-        self.ssh_slave_roots.append(new_dir)
-        self.env['MOCK_SSH_ROOTS'] += (':testmaster!testslave%d=%s'
-                                       % (slave_num, new_dir))
+    def add_subordinate(self):
+        subordinate_num = len(self.ssh_subordinate_roots) + 1
+        new_dir = self.makedirs('testsubordinate%d' % subordinate_num)
+        self.ssh_subordinate_roots.append(new_dir)
+        self.env['MOCK_SSH_ROOTS'] += (':testmain!testsubordinate%d=%s'
+                                       % (subordinate_num, new_dir))
 
-    def make_master_file(self, path, contents):
-        return self.makefile(os.path.join(self.master_ssh_root, path),
+    def make_main_file(self, path, contents):
+        return self.makefile(os.path.join(self.main_ssh_root, path),
                              contents)
 
-    def make_slave_file(self, slave_num, path, contents):
-        return self.makefile(os.path.join('testslave%d' % slave_num, path),
+    def make_subordinate_file(self, subordinate_num, path, contents):
+        return self.makefile(os.path.join('testsubordinate%d' % subordinate_num, path),
                              contents)
 
     def test_ls_empty(self):
-        self.assertEqual(list(self.fs.ls('ssh://testmaster/')), [])
+        self.assertEqual(list(self.fs.ls('ssh://testmain/')), [])
 
     def test_ls_basic(self):
-        self.make_master_file('f', 'contents')
-        self.assertEqual(list(self.fs.ls('ssh://testmaster/')),
-                         ['ssh://testmaster/f'])
+        self.make_main_file('f', 'contents')
+        self.assertEqual(list(self.fs.ls('ssh://testmain/')),
+                         ['ssh://testmain/f'])
 
     def test_ls_basic_2(self):
-        self.make_master_file('f', 'contents')
-        self.make_master_file('f2', 'contents')
-        self.assertEqual(sorted(self.fs.ls('ssh://testmaster/')),
-                         ['ssh://testmaster/f', 'ssh://testmaster/f2'])
+        self.make_main_file('f', 'contents')
+        self.make_main_file('f2', 'contents')
+        self.assertEqual(sorted(self.fs.ls('ssh://testmain/')),
+                         ['ssh://testmain/f', 'ssh://testmain/f2'])
 
     def test_ls_recurse(self):
-        self.make_master_file('f', 'contents')
-        self.make_master_file('d/f2', 'contents')
-        self.assertEqual(sorted(self.fs.ls('ssh://testmaster/')),
-                         ['ssh://testmaster/d/f2', 'ssh://testmaster/f'])
+        self.make_main_file('f', 'contents')
+        self.make_main_file('d/f2', 'contents')
+        self.assertEqual(sorted(self.fs.ls('ssh://testmain/')),
+                         ['ssh://testmain/d/f2', 'ssh://testmain/f'])
 
     def test_cat_uncompressed(self):
-        self.make_master_file(os.path.join('data', 'foo'), 'foo\nfoo\n')
-        remote_path = self.fs.join('ssh://testmaster/data', 'foo')
+        self.make_main_file(os.path.join('data', 'foo'), 'foo\nfoo\n')
+        remote_path = self.fs.join('ssh://testmain/data', 'foo')
 
         self.assertEqual(list(self.fs._cat_file(remote_path)),
                          [b'foo\n', b'foo\n'])
 
     def test_cat_bz2(self):
-        self.make_master_file(os.path.join('data', 'foo.bz2'),
+        self.make_main_file(os.path.join('data', 'foo.bz2'),
                               bz2.compress(b'foo\n' * 1000))
-        remote_path = self.fs.join('ssh://testmaster/data', 'foo.bz2')
+        remote_path = self.fs.join('ssh://testmain/data', 'foo.bz2')
 
         self.assertEqual(list(self.fs._cat_file(remote_path)),
                          [b'foo\n'] * 1000)
 
     def test_cat_gz(self):
-        self.make_master_file(os.path.join('data', 'foo.gz'),
+        self.make_main_file(os.path.join('data', 'foo.gz'),
                               gzip_compress(b'foo\n' * 10000))
-        remote_path = self.fs.join('ssh://testmaster/data', 'foo.gz')
+        remote_path = self.fs.join('ssh://testmain/data', 'foo.gz')
 
         self.assertEqual(list(self.fs._cat_file(remote_path)),
                          [b'foo\n'] * 10000)
 
-    def test_slave_cat(self):
-        self.add_slave()
-        self.make_slave_file(1, 'f', 'foo\nfoo\n')
-        remote_path = 'ssh://testmaster!testslave1/f'
+    def test_subordinate_cat(self):
+        self.add_subordinate()
+        self.make_subordinate_file(1, 'f', 'foo\nfoo\n')
+        remote_path = 'ssh://testmain!testsubordinate1/f'
 
         self.assertEqual(list(self.fs._cat_file(remote_path)),
                          [b'foo\n', b'foo\n'])
 
-    def test_slave_ls(self):
-        self.add_slave()
-        self.make_slave_file(1, 'f', 'foo\nfoo\n')
-        remote_path = 'ssh://testmaster!testslave1/'
+    def test_subordinate_ls(self):
+        self.add_subordinate()
+        self.make_subordinate_file(1, 'f', 'foo\nfoo\n')
+        remote_path = 'ssh://testmain!testsubordinate1/'
 
         self.assertEqual(list(self.fs.ls(remote_path)),
-                         ['ssh://testmaster!testslave1/f'])
+                         ['ssh://testmain!testsubordinate1/f'])
 
     def test_du(self):
-        self.make_master_file('f', 'contents')
+        self.make_main_file('f', 'contents')
         # not implemented
-        self.assertRaises(IOError, self.fs.du, 'ssh://testmaster/f')
+        self.assertRaises(IOError, self.fs.du, 'ssh://testmain/f')
 
     def test_mkdir(self):
         # not implemented
-        self.assertRaises(IOError, self.fs.mkdir, 'ssh://testmaster/d')
+        self.assertRaises(IOError, self.fs.mkdir, 'ssh://testmain/d')
 
     def test_exists_no(self):
-        path = 'ssh://testmaster/f'
+        path = 'ssh://testmain/f'
         self.assertEqual(self.fs.exists(path), False)
 
     def test_exists_yes(self):
-        self.make_master_file('f', 'contents')
-        path = 'ssh://testmaster/f'
+        self.make_main_file('f', 'contents')
+        path = 'ssh://testmain/f'
         self.assertEqual(self.fs.exists(path), True)
 
     def test_rm(self):
-        self.make_master_file('f', 'contents')
+        self.make_main_file('f', 'contents')
         # not implemented
-        self.assertRaises(IOError, self.fs.rm, 'ssh://testmaster/f')
+        self.assertRaises(IOError, self.fs.rm, 'ssh://testmain/f')
 
     def test_touchz(self):
         # not implemented
-        self.assertRaises(IOError, self.fs.touchz, 'ssh://testmaster/d')
+        self.assertRaises(IOError, self.fs.touchz, 'ssh://testmain/d')
 
     def test_md5sum(self):
         # not implemented
-        self.assertRaises(IOError, self.fs.md5sum, 'ssh://testmaster/d')
+        self.assertRaises(IOError, self.fs.md5sum, 'ssh://testmain/d')

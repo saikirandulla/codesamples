@@ -55,34 +55,34 @@ class MRBossTestCase(MockBotoTestCase):
         self.runner.cleanup()
 
     def test_one_node(self):
-        mock_ssh_file('testmaster', 'some_file', b'file contents')
+        mock_ssh_file('testmain', 'some_file', b'file contents')
 
         run_on_all_nodes(self.runner, self.output_dir, ['cat', 'some_file'],
                          print_stderr=False)
 
-        with open(os.path.join(self.output_dir, 'master', 'stdout'), 'r') as f:
+        with open(os.path.join(self.output_dir, 'main', 'stdout'), 'r') as f:
             self.assertEqual(f.read().rstrip(), 'file contents')
 
-        self.assertEqual(os.listdir(self.output_dir), ['master'])
+        self.assertEqual(os.listdir(self.output_dir), ['main'])
 
     def test_two_nodes(self):
-        self.add_slave()
+        self.add_subordinate()
         self.runner._opts['num_ec2_instances'] = 2
 
-        mock_ssh_file('testmaster', 'some_file', b'file contents 1')
-        mock_ssh_file('testmaster!testslave0', 'some_file', b'file contents 2')
+        mock_ssh_file('testmain', 'some_file', b'file contents 1')
+        mock_ssh_file('testmain!testsubordinate0', 'some_file', b'file contents 2')
 
         self.runner.fs  # force initialization of _ssh_fs
 
         run_on_all_nodes(self.runner, self.output_dir, ['cat', 'some_file'],
                          print_stderr=False)
 
-        with open(os.path.join(self.output_dir, 'master', 'stdout'), 'r') as f:
+        with open(os.path.join(self.output_dir, 'main', 'stdout'), 'r') as f:
             self.assertEqual(f.read().rstrip(), 'file contents 1')
 
-        with open(os.path.join(self.output_dir, 'slave testslave0', 'stdout'),
+        with open(os.path.join(self.output_dir, 'subordinate testsubordinate0', 'stdout'),
                   'r') as f:
             self.assertEqual(f.read().strip(), 'file contents 2')
 
         self.assertEqual(sorted(os.listdir(self.output_dir)),
-                         ['master', 'slave testslave0'])
+                         ['main', 'subordinate testsubordinate0'])

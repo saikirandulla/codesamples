@@ -608,11 +608,11 @@ class MRJobLauncher(object):
         """
         file_upload_args = []
 
-        master_option_dict = self.options.__dict__
+        main_option_dict = self.options.__dict__
 
         for opt in self._file_options:
             opt_prefix = opt.get_opt_string()
-            opt_value = master_option_dict[opt.dest]
+            opt_value = main_option_dict[opt.dest]
 
             if opt_value:
                 paths = opt_value if opt.action == 'append' else [opt_value]

@@ -58,7 +58,7 @@ def _pool_hash_and_name(bootstrap_actions):
     """Return the hash and pool name for the given job flow, or
     ``(None, None)`` if it isn't pooled."""
     for bootstrap_action in bootstrap_actions:
-        if bootstrap_action.name == 'master':
+        if bootstrap_action.name == 'main':
             args = [arg.value for arg in bootstrap_action.args]
             if len(args) == 2 and args[0].startswith('pool-'):
                 return args[0][5:], args[1]

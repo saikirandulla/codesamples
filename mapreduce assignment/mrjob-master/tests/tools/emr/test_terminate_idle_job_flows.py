@@ -317,7 +317,7 @@ class JobFlowTerminationTestCase(MockBotoTestCase):
                     MockEmrObject(
                         value='pool-0123456789abcdef0123456789abcdef'),
                     MockEmrObject(value='reflecting'),
-                ], name='master'),
+                ], name='main'),
             ],
             id='j-POOLED',
             status=MockEmrObject(

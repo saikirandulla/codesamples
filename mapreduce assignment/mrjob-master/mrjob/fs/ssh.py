@@ -19,7 +19,7 @@ from mrjob.fs.base import Filesystem
 from mrjob.ssh import ssh_cat
 from mrjob.ssh import ssh_copy_key
 from mrjob.ssh import ssh_ls
-from mrjob.ssh import ssh_slave_addresses
+from mrjob.ssh import ssh_subordinate_addresses
 from mrjob.ssh import SSH_PREFIX
 from mrjob.ssh import SSH_URI_RE
 from mrjob.util import random_identifier
@@ -51,8 +51,8 @@ class SSHFilesystem(Filesystem):
         # what the (random) name of the key file is on that host
         self._host_to_key_filename = {}
 
-        # keep track of the slave hosts accessible through each host
-        self._host_to_slave_hosts = {}
+        # keep track of the subordinate hosts accessible through each host
+        self._host_to_subordinate_hosts = {}
 
     def can_handle_path(self, path):
         return SSH_URI_RE.match(path) is not None
@@ -67,8 +67,8 @@ class SSHFilesystem(Filesystem):
             return
 
     def _key_filename_for(self, addr):
-        """If *addr* is a !-separated pair of hosts like ``master!slave``,
-        get the name of the copy of our keypair file on ``master``. If there
+        """If *addr* is a !-separated pair of hosts like ``main!subordinate``,
+        get the name of the copy of our keypair file on ``main``. If there
         isn't one, pick a random name, and copy the key file there.
 
         Otherwise, return ``None``."""
@@ -114,7 +114,7 @@ class SSHFilesystem(Filesystem):
 
     def _cat_file(self, filename):
         ssh_match = SSH_URI_RE.match(filename)
-        addr = ssh_match.group('hostname') or self._address_of_master()
+        addr = ssh_match.group('hostname') or self._address_of_main()
 
         keyfile = self._key_filename_for(addr)
 
@@ -143,10 +143,10 @@ class SSHFilesystem(Filesystem):
     def touchz(self, dest):
         raise IOError()  # not implemented
 
-    def ssh_slave_hosts(self, host, force=False):
-        """Get a list of the slave hosts reachable through *hosts*"""
-        if force or host not in self._host_to_slave_hosts:
-            self._host_to_slave_hosts[host] = ssh_slave_addresses(
+    def ssh_subordinate_hosts(self, host, force=False):
+        """Get a list of the subordinate hosts reachable through *hosts*"""
+        if force or host not in self._host_to_subordinate_hosts:
+            self._host_to_subordinate_hosts[host] = ssh_subordinate_addresses(
                 self._ssh_bin, host, self._ec2_key_pair_file)
 
-        return self._host_to_slave_hosts[host]
+        return self._host_to_subordinate_hosts[host]

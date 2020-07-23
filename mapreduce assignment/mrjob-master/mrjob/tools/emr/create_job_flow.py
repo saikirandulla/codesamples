@@ -48,12 +48,12 @@ Options::
                         uploaded to S3. To add arguments, just use quotes:
                         "foo.sh arg1 arg2"
   --bootstrap-cmd=BOOTSTRAP_CMDS
-                        Commands to run on the master node to set up
+                        Commands to run on the main node to set up
                         libraries, etc. You can use --bootstrap-cmd more than
                         once. Use mrjob.conf to specify arguments as a list to
                         be run directly.
   --bootstrap-file=BOOTSTRAP_FILES
-                        File to upload to the master node before running
+                        File to upload to the main node before running
                         bootstrap_cmds (for example, debian packages). These
                         will be made public on S3 due to a limitation of the
                         bootstrap feature. You can use --bootstrap-file more
@@ -72,7 +72,7 @@ Options::
                         setup.py install``. You can use --bootstrap-python-
                         package more than once.
   --bootstrap-script=BOOTSTRAP_SCRIPTS
-                        Script to upload and then run on the master node (a
+                        Script to upload and then run on the main node (a
                         combination of bootstrap_cmds and bootstrap_files).
                         These are run after the command from bootstrap_cmds.
                         You can use --bootstrap-script more than once.
@@ -80,24 +80,24 @@ Options::
                         Path to alternate mrjob.conf file to read from
   --no-conf             Don't load mrjob.conf even if it's available
   --ec2-core-instance-bid-price=EC2_CORE_INSTANCE_BID_PRICE
-                        Bid price to specify for core (or "slave") nodes when
+                        Bid price to specify for core (or "subordinate") nodes when
                         setting them up as EC2 spot instances (you probably
                         only want to set a bid price for task instances).
   --ec2-core-instance-type=EC2_CORE_INSTANCE_TYPE,
-  --ec2-slave-instance-type=EC2_CORE_INSTANCE_TYPE
-                        Type of EC2 instance for core (or "slave") nodes only
+  --ec2-subordinate-instance-type=EC2_CORE_INSTANCE_TYPE
+                        Type of EC2 instance for core (or "subordinate") nodes only
   --ec2-instance-type=EC2_INSTANCE_TYPE
                         Type of EC2 instance(s) to launch (e.g. m1.small,
                         c1.xlarge, m2.xlarge). See http://aws.amazon.com/ec2
                         /instance-types/ for the full list.
   --ec2-key-pair=EC2_KEY_PAIR
                         Name of the SSH key pair you set up for EMR
-  --ec2-master-instance-bid-price=EC2_MASTER_INSTANCE_BID_PRICE
-                        Bid price to specify for the master node when setting
+  --ec2-main-instance-bid-price=EC2_MASTER_INSTANCE_BID_PRICE
+                        Bid price to specify for the main node when setting
                         it up as an EC2 spot instance (you probably only want
                         to set a bid price for task instances).
-  --ec2-master-instance-type=EC2_MASTER_INSTANCE_TYPE
-                        Type of EC2 instance for master node only
+  --ec2-main-instance-type=EC2_MASTER_INSTANCE_TYPE
+                        Type of EC2 instance for main node only
   --ec2-task-instance-bid-price=EC2_TASK_INSTANCE_BID_PRICE
                         Bid price to specify for task nodes when setting them
                         up as EC2 spot instances.
@@ -140,7 +140,7 @@ Options::
                         Parameters to be unset when calling EMR API. You can
                         use --no-emr-api-param multiple times.
   --num-ec2-core-instances=NUM_EC2_CORE_INSTANCES
-                        Number of EC2 instances to start as core (or "slave")
+                        Number of EC2 instances to start as core (or "subordinate")
                         nodes. Incompatible with --num-ec2-instances.
   --num-ec2-instances=NUM_EC2_INSTANCES
                         Total number of EC2 instances to launch

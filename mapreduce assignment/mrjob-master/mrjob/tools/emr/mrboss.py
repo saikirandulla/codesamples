@@ -65,7 +65,7 @@ from mrjob.util import shlex_split
 
 def main(cl_args=None):
     usage = 'usage: %prog JOB_FLOW_ID OUTPUT_DIR [options] "command string"'
-    description = ('Run a command on the master and all slaves of an EMR job'
+    description = ('Run a command on the main and all subordinates of an EMR job'
                    ' flow. Store stdout and stderr for results in OUTPUT_DIR.')
 
     option_parser = OptionParser(usage=usage, description=description)
@@ -98,7 +98,7 @@ def main(cl_args=None):
     output_dir = os.path.abspath(options.output_dir or job_flow_id)
 
     with EMRJobRunner(emr_job_flow_id=job_flow_id, **runner_kwargs) as runner:
-        runner._enable_slave_ssh_access()
+        runner._enable_subordinate_ssh_access()
         run_on_all_nodes(runner, output_dir, cmd_args)
 
 
@@ -107,22 +107,22 @@ def run_on_all_nodes(runner, output_dir, cmd_args, print_stderr=True):
     *cmd_args* on all nodes in the job flow and save the stdout and stderr of
     each run to subdirectories of *output_dir*.
 
-    You should probably have run :py:meth:`_enable_slave_ssh_access()` on the
+    You should probably have run :py:meth:`_enable_subordinate_ssh_access()` on the
     runner before calling this function.
     """
-    master_addr = runner._address_of_master()
-    addresses = [master_addr]
+    main_addr = runner._address_of_main()
+    addresses = [main_addr]
 
     ssh_bin = runner._opts['ssh_bin']
     ec2_key_pair_file = runner._opts['ec2_key_pair_file']
 
     keyfile = None
     if runner._opts['num_ec2_instances'] > 1:
-        addresses += ['%s!%s' % (master_addr, slave_addr)
-                      for slave_addr in runner._addresses_of_slaves()]
+        addresses += ['%s!%s' % (main_addr, subordinate_addr)
+                      for subordinate_addr in runner._addresses_of_subordinates()]
         # copying key file like a boss (name of keyfile doesn't really matter)
         keyfile = 'mrboss-%s.pem' % random_identifier()
-        ssh_copy_key(ssh_bin, master_addr, ec2_key_pair_file, keyfile)
+        ssh_copy_key(ssh_bin, main_addr, ec2_key_pair_file, keyfile)
 
     for addr in addresses:
 
@@ -140,9 +140,9 @@ def run_on_all_nodes(runner, output_dir, cmd_args, print_stderr=True):
             print(stderr, end=' ')
 
         if '!' in addr:
-            base_dir = os.path.join(output_dir, 'slave ' + addr.split('!')[1])
+            base_dir = os.path.join(output_dir, 'subordinate ' + addr.split('!')[1])
         else:
-            base_dir = os.path.join(output_dir, 'master')
+            base_dir = os.path.join(output_dir, 'main')
 
         if not os.path.exists(base_dir):
             os.makedirs(base_dir)

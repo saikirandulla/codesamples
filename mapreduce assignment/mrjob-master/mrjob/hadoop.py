@@ -324,7 +324,7 @@ class HadoopJobRunner(MRJobRunner):
 
             # try to use a PTY if it's available
             try:
-                pid, master_fd = pty.fork()
+                pid, main_fd = pty.fork()
             except (AttributeError, OSError):
                 # no PTYs, just use Popen
                 step_proc = Popen(step_args, stdout=PIPE, stderr=PIPE)
@@ -344,10 +344,10 @@ class HadoopJobRunner(MRJobRunner):
                 if pid == 0:  # we are the child process
                     os.execvp(step_args[0], step_args)
                 else:
-                    with os.fdopen(master_fd, 'rb') as master:
-                        # reading from master gives us the subprocess's
+                    with os.fdopen(main_fd, 'rb') as main:
+                        # reading from main gives us the subprocess's
                         # stderr and stdout (it's a fake terminal)
-                        self._process_stderr_from_streaming(master)
+                        self._process_stderr_from_streaming(main)
                         _, returncode = os.waitpid(pid, 0)
 
             if returncode == 0:

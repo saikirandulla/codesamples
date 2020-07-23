@@ -436,7 +436,7 @@ class WorkingDirManager(object):
 
 
 class BootstrapWorkingDirManager(WorkingDirManager):
-    """Manage the working dir for the master bootstrap script. Identical
+    """Manage the working dir for the main bootstrap script. Identical
     to :py:class:`WorkingDirManager` except that it doesn't support archives.
     """
     _SUPPORTED_TYPES = ('file',)
