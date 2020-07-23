@@ -328,7 +328,7 @@ class ExistingClusterTestCase(MockBotoTestCase):
 
             # Issue 182: don't create the bootstrap script when
             # attaching to another job flow
-            self.assertIsNone(runner._master_bootstrap_script_path)
+            self.assertIsNone(runner._main_bootstrap_script_path)
 
             for line in runner.stream_output():
                 key, value = mr_job.parse_output_line(line)
@@ -826,55 +826,55 @@ class EC2InstanceGroupTestCase(MockBotoTestCase):
     def test_defaults(self):
         self._test_instance_groups(
             {},
-            master=(1, 'm1.medium', None))
+            main=(1, 'm1.medium', None))
 
         self._test_instance_groups(
             {'num_ec2_instances': 3},
             core=(2, 'm1.medium', None),
-            master=(1, 'm1.medium', None))
+            main=(1, 'm1.medium', None))
 
     def test_single_instance(self):
         self._test_instance_groups(
             {'ec2_instance_type': 'c1.xlarge'},
-            master=(1, 'c1.xlarge', None))
+            main=(1, 'c1.xlarge', None))
 
     def test_multiple_instances(self):
         self._test_instance_groups(
             {'ec2_instance_type': 'c1.xlarge', 'num_ec2_instances': 3},
             core=(2, 'c1.xlarge', None),
-            master=(1, 'm1.medium', None))
+            main=(1, 'm1.medium', None))
 
-    def test_explicit_master_and_slave_instance_types(self):
+    def test_explicit_main_and_subordinate_instance_types(self):
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large'},
-            master=(1, 'm1.large', None))
+            {'ec2_main_instance_type': 'm1.large'},
+            main=(1, 'm1.large', None))
 
         self._test_instance_groups(
-            {'ec2_slave_instance_type': 'm2.xlarge',
+            {'ec2_subordinate_instance_type': 'm2.xlarge',
              'num_ec2_instances': 3},
             core=(2, 'm2.xlarge', None),
-            master=(1, 'm1.medium', None))
+            main=(1, 'm1.medium', None))
 
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large',
-             'ec2_slave_instance_type': 'm2.xlarge',
+            {'ec2_main_instance_type': 'm1.large',
+             'ec2_subordinate_instance_type': 'm2.xlarge',
              'num_ec2_instances': 3},
             core=(2, 'm2.xlarge', None),
-            master=(1, 'm1.large', None))
+            main=(1, 'm1.large', None))
 
     def test_explicit_instance_types_take_precedence(self):
         self._test_instance_groups(
             {'ec2_instance_type': 'c1.xlarge',
-             'ec2_master_instance_type': 'm1.large'},
-            master=(1, 'm1.large', None))
+             'ec2_main_instance_type': 'm1.large'},
+            main=(1, 'm1.large', None))
 
         self._test_instance_groups(
             {'ec2_instance_type': 'c1.xlarge',
-             'ec2_master_instance_type': 'm1.large',
-             'ec2_slave_instance_type': 'm2.xlarge',
+             'ec2_main_instance_type': 'm1.large',
+             'ec2_subordinate_instance_type': 'm2.xlarge',
              'num_ec2_instances': 3},
             core=(2, 'm2.xlarge', None),
-            master=(1, 'm1.large', None))
+            main=(1, 'm1.large', None))
 
     def test_cmd_line_opts_beat_mrjob_conf(self):
         # set ec2_instance_type in mrjob.conf, 1 instance
@@ -882,11 +882,11 @@ class EC2InstanceGroupTestCase(MockBotoTestCase):
 
         self._test_instance_groups(
             {},
-            master=(1, 'c1.xlarge', None))
+            main=(1, 'c1.xlarge', None))
 
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large'},
-            master=(1, 'm1.large', None))
+            {'ec2_main_instance_type': 'm1.large'},
+            main=(1, 'm1.large', None))
 
         # set ec2_instance_type in mrjob.conf, 3 instances
         self.set_in_mrjob_conf(ec2_instance_type='c1.xlarge',
@@ -895,86 +895,86 @@ class EC2InstanceGroupTestCase(MockBotoTestCase):
         self._test_instance_groups(
             {},
             core=(2, 'c1.xlarge', None),
-            master=(1, 'm1.medium', None))
+            main=(1, 'm1.medium', None))
 
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large',
-             'ec2_slave_instance_type': 'm2.xlarge'},
+            {'ec2_main_instance_type': 'm1.large',
+             'ec2_subordinate_instance_type': 'm2.xlarge'},
             core=(2, 'm2.xlarge', None),
-            master=(1, 'm1.large', None))
+            main=(1, 'm1.large', None))
 
-        # set master in mrjob.conf, 1 instance
-        self.set_in_mrjob_conf(ec2_master_instance_type='m1.large')
+        # set main in mrjob.conf, 1 instance
+        self.set_in_mrjob_conf(ec2_main_instance_type='m1.large')
 
         self._test_instance_groups(
             {},
-            master=(1, 'm1.large', None))
+            main=(1, 'm1.large', None))
 
         self._test_instance_groups(
             {'ec2_instance_type': 'c1.xlarge'},
-            master=(1, 'c1.xlarge', None))
+            main=(1, 'c1.xlarge', None))
 
-        # set master and slave in mrjob.conf, 2 instances
-        self.set_in_mrjob_conf(ec2_master_instance_type='m1.large',
-                               ec2_slave_instance_type='m2.xlarge',
+        # set main and subordinate in mrjob.conf, 2 instances
+        self.set_in_mrjob_conf(ec2_main_instance_type='m1.large',
+                               ec2_subordinate_instance_type='m2.xlarge',
                                num_ec2_instances=3)
 
         self._test_instance_groups(
             {},
             core=(2, 'm2.xlarge', None),
-            master=(1, 'm1.large', None))
+            main=(1, 'm1.large', None))
 
         self._test_instance_groups(
             {'ec2_instance_type': 'c1.xlarge'},
             core=(2, 'c1.xlarge', None),
-            master=(1, 'm1.large', None))
+            main=(1, 'm1.large', None))
 
     def test_zero_core_instances(self):
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'c1.medium',
+            {'ec2_main_instance_type': 'c1.medium',
              'num_ec2_core_instances': 0},
-            master=(1, 'c1.medium', None))
+            main=(1, 'c1.medium', None))
 
     def test_core_spot_instances(self):
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large',
+            {'ec2_main_instance_type': 'm1.large',
              'ec2_core_instance_type': 'c1.medium',
              'ec2_core_instance_bid_price': '0.20',
              'num_ec2_core_instances': 5},
             core=(5, 'c1.medium', '0.20'),
-            master=(1, 'm1.large', None))
+            main=(1, 'm1.large', None))
 
     def test_core_on_demand_instances(self):
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large',
+            {'ec2_main_instance_type': 'm1.large',
              'ec2_core_instance_type': 'c1.medium',
              'num_ec2_core_instances': 5},
             core=(5, 'c1.medium', None),
-            master=(1, 'm1.large', None))
+            main=(1, 'm1.large', None))
 
-        # Test the ec2_slave_instance_type alias
+        # Test the ec2_subordinate_instance_type alias
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large',
-             'ec2_slave_instance_type': 'c1.medium',
+            {'ec2_main_instance_type': 'm1.large',
+             'ec2_subordinate_instance_type': 'c1.medium',
              'num_ec2_instances': 6},
             core=(5, 'c1.medium', None),
-            master=(1, 'm1.large', None))
+            main=(1, 'm1.large', None))
 
     def test_core_and_task_on_demand_instances(self):
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large',
+            {'ec2_main_instance_type': 'm1.large',
              'ec2_core_instance_type': 'c1.medium',
              'num_ec2_core_instances': 5,
              'ec2_task_instance_type': 'm2.xlarge',
              'num_ec2_task_instances': 20,
              },
             core=(5, 'c1.medium', None),
-            master=(1, 'm1.large', None),
+            main=(1, 'm1.large', None),
             task=(20, 'm2.xlarge', None))
 
     def test_core_and_task_spot_instances(self):
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large',
+            {'ec2_main_instance_type': 'm1.large',
              'ec2_core_instance_type': 'c1.medium',
              'ec2_core_instance_bid_price': '0.20',
              'num_ec2_core_instances': 10,
@@ -983,11 +983,11 @@ class EC2InstanceGroupTestCase(MockBotoTestCase):
              'num_ec2_task_instances': 20,
              },
             core=(10, 'c1.medium', '0.20'),
-            master=(1, 'm1.large', None),
+            main=(1, 'm1.large', None),
             task=(20, 'm2.xlarge', '1.00'))
 
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large',
+            {'ec2_main_instance_type': 'm1.large',
              'ec2_core_instance_type': 'c1.medium',
              'num_ec2_core_instances': 10,
              'ec2_task_instance_type': 'm2.xlarge',
@@ -995,39 +995,39 @@ class EC2InstanceGroupTestCase(MockBotoTestCase):
              'num_ec2_task_instances': 20,
              },
             core=(10, 'c1.medium', None),
-            master=(1, 'm1.large', None),
+            main=(1, 'm1.large', None),
             task=(20, 'm2.xlarge', '1.00'))
 
-    def test_master_and_core_spot_instances(self):
+    def test_main_and_core_spot_instances(self):
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large',
-             'ec2_master_instance_bid_price': '0.50',
+            {'ec2_main_instance_type': 'm1.large',
+             'ec2_main_instance_bid_price': '0.50',
              'ec2_core_instance_type': 'c1.medium',
              'ec2_core_instance_bid_price': '0.20',
              'num_ec2_core_instances': 10,
              },
             core=(10, 'c1.medium', '0.20'),
-            master=(1, 'm1.large', '0.50'))
+            main=(1, 'm1.large', '0.50'))
 
-    def test_master_spot_instance(self):
+    def test_main_spot_instance(self):
         self._test_instance_groups(
-            {'ec2_master_instance_type': 'm1.large',
-             'ec2_master_instance_bid_price': '0.50',
+            {'ec2_main_instance_type': 'm1.large',
+             'ec2_main_instance_bid_price': '0.50',
              },
-            master=(1, 'm1.large', '0.50'))
+            main=(1, 'm1.large', '0.50'))
 
     def test_zero_or_blank_bid_price_means_on_demand(self):
         self._test_instance_groups(
-            {'ec2_master_instance_bid_price': '0',
+            {'ec2_main_instance_bid_price': '0',
              },
-            master=(1, 'm1.medium', None))
+            main=(1, 'm1.medium', None))
 
         self._test_instance_groups(
             {'num_ec2_core_instances': 3,
              'ec2_core_instance_bid_price': '0.00',
              },
             core=(3, 'm1.medium', None),
-            master=(1, 'm1.medium', None))
+            main=(1, 'm1.medium', None))
 
         self._test_instance_groups(
             {'num_ec2_core_instances': 3,
@@ -1035,14 +1035,14 @@ class EC2InstanceGroupTestCase(MockBotoTestCase):
              'ec2_task_instance_bid_price': '',
              },
             core=(3, 'm1.medium', None),
-            master=(1, 'm1.medium', None),
+            main=(1, 'm1.medium', None),
             task=(5, 'm1.medium', None))
 
     def test_pass_invalid_bid_prices_through_to_emr(self):
         self.assertRaises(
             boto.exception.EmrResponseError,
             self._test_instance_groups,
-            {'ec2_master_instance_bid_price': 'all the gold in California'})
+            {'ec2_main_instance_bid_price': 'all the gold in California'})
 
     def test_task_type_defaults_to_core_type(self):
         self._test_instance_groups(
@@ -1051,7 +1051,7 @@ class EC2InstanceGroupTestCase(MockBotoTestCase):
              'num_ec2_task_instances': 20,
              },
             core=(5, 'c1.medium', None),
-            master=(1, 'm1.medium', None),
+            main=(1, 'm1.medium', None),
             task=(20, 'c1.medium', None))
 
     def test_mixing_instance_number_opts_on_cmd_line(self):
@@ -1062,7 +1062,7 @@ class EC2InstanceGroupTestCase(MockBotoTestCase):
                 {'num_ec2_instances': 4,
                  'num_ec2_core_instances': 10},
                 core=(10, 'm1.medium', None),
-                master=(1, 'm1.medium', None))
+                main=(1, 'm1.medium', None))
 
         self.assertIn('does not make sense', stderr.getvalue())
 
@@ -1077,7 +1077,7 @@ class EC2InstanceGroupTestCase(MockBotoTestCase):
             self._test_instance_groups(
                 {},
                 core=(5, 'm1.medium', None),
-                master=(1, 'm1.medium', None),
+                main=(1, 'm1.medium', None),
                 task=(9, 'm1.medium', None))
 
         self.assertIn('does not make sense', stderr.getvalue())
@@ -1092,7 +1092,7 @@ class EC2InstanceGroupTestCase(MockBotoTestCase):
             self._test_instance_groups(
                 {'num_ec2_instances': 3},
                 core=(2, 'm1.medium', None),
-                master=(1, 'm1.medium', None))
+                main=(1, 'm1.medium', None))
 
         self.assertNotIn('does not make sense', stderr.getvalue())
 
@@ -1483,14 +1483,14 @@ class LogFetchingFallbackTestCase(MockBotoTestCase):
         self.runner.cleanup()
 
     def test_exception_in_s3_logs_beats_ssh(self):
-        mock_ssh_dir('testmaster', SSH_LOG_ROOT + '/steps/s-ONE')
-        mock_ssh_dir('testmaster', SSH_LOG_ROOT + '/history')
-        mock_ssh_dir('testmaster', SSH_LOG_ROOT + '/userlogs')
+        mock_ssh_dir('testmain', SSH_LOG_ROOT + '/steps/s-ONE')
+        mock_ssh_dir('testmain', SSH_LOG_ROOT + '/history')
+        mock_ssh_dir('testmain', SSH_LOG_ROOT + '/userlogs')
 
         # Put a log file and error into SSH
         ssh_lone_log_path = posixpath.join(
             SSH_LOG_ROOT, 'steps', 's-ONE', 'syslog')
-        mock_ssh_file('testmaster', ssh_lone_log_path,
+        mock_ssh_file('testmain', ssh_lone_log_path,
                       HADOOP_ERR_LINE_PREFIX + USEFUL_HADOOP_ERROR + b'\n')
 
         # Put a 'more interesting' error in S3
@@ -1503,13 +1503,13 @@ class LogFetchingFallbackTestCase(MockBotoTestCase):
                          's3://walrus/' + TASK_ATTEMPTS_DIR +
                          'attempt_201007271720_0002_m_000126_0/stderr')
 
-    def test_ssh_works_with_slaves(self):
-        self.add_slave()
+    def test_ssh_works_with_subordinates(self):
+        self.add_subordinate()
 
-        mock_ssh_dir('testmaster', SSH_LOG_ROOT + '/steps/s-ONE')
-        mock_ssh_dir('testmaster', SSH_LOG_ROOT + '/history')
+        mock_ssh_dir('testmain', SSH_LOG_ROOT + '/steps/s-ONE')
+        mock_ssh_dir('testmain', SSH_LOG_ROOT + '/history')
         mock_ssh_dir(
-            'testmaster!testslave0',
+            'testmain!testsubordinate0',
             SSH_LOG_ROOT + '/userlogs/attempt_201007271720_0002_m_000126_0')
 
         # Put a log file and error into SSH
@@ -1519,13 +1519,13 @@ class LogFetchingFallbackTestCase(MockBotoTestCase):
         ssh_log_path_2 = posixpath.join(SSH_LOG_ROOT, 'userlogs',
                                         'attempt_201007271720_0002_m_000126_0',
                                         'syslog')
-        mock_ssh_file('testmaster!testslave0', ssh_log_path,
+        mock_ssh_file('testmain!testsubordinate0', ssh_log_path,
                       TRACEBACK_START + PY_EXCEPTION)
-        mock_ssh_file('testmaster!testslave0', ssh_log_path_2,
+        mock_ssh_file('testmain!testsubordinate0', ssh_log_path_2,
                       b'')
         failure = self.runner._find_probable_cause_of_failure([1, 2])
         self.assertEqual(failure['log_file_uri'],
-                         SSH_PREFIX + 'testmaster!testslave0' + ssh_log_path)
+                         SSH_PREFIX + 'testmain!testsubordinate0' + ssh_log_path)
 
     def test_ssh_fails_to_s3(self):
         # the runner will try to use SSH and find itself unable to do so,
@@ -1642,26 +1642,26 @@ class TestSSHLs(MockBotoTestCase):
         self.prepare_runner_for_ssh(self.runner)
 
     def test_ssh_ls(self):
-        self.add_slave()
+        self.add_subordinate()
 
-        mock_ssh_dir('testmaster', 'test')
-        mock_ssh_file('testmaster', posixpath.join('test', 'one'), b'')
-        mock_ssh_file('testmaster', posixpath.join('test', 'two'), b'')
-        mock_ssh_dir('testmaster!testslave0', 'test')
-        mock_ssh_file('testmaster!testslave0',
+        mock_ssh_dir('testmain', 'test')
+        mock_ssh_file('testmain', posixpath.join('test', 'one'), b'')
+        mock_ssh_file('testmain', posixpath.join('test', 'two'), b'')
+        mock_ssh_dir('testmain!testsubordinate0', 'test')
+        mock_ssh_file('testmain!testsubordinate0',
                       posixpath.join('test', 'three'), b'')
 
         self.assertEqual(
-            sorted(self.runner.fs.ls('ssh://testmaster/test')),
-            ['ssh://testmaster/test/one', 'ssh://testmaster/test/two'])
+            sorted(self.runner.fs.ls('ssh://testmain/test')),
+            ['ssh://testmain/test/one', 'ssh://testmain/test/two'])
 
         self.assertEqual(
-            list(self.runner.fs.ls('ssh://testmaster!testslave0/test')),
-            ['ssh://testmaster!testslave0/test/three'])
+            list(self.runner.fs.ls('ssh://testmain!testsubordinate0/test')),
+            ['ssh://testmain!testsubordinate0/test/three'])
 
         # ls() is a generator, so the exception won't fire until we list() it
         self.assertRaises(IOError, list,
-                          self.runner.fs.ls('ssh://testmaster/does_not_exist'))
+                          self.runner.fs.ls('ssh://testmain/does_not_exist'))
 
 
 class TestNoBoto(TestCase):
@@ -1687,7 +1687,7 @@ class TestNoBoto(TestCase):
         self.assertRaises(ImportError, EMRJobRunner, conf_paths=[])
 
 
-class TestMasterBootstrapScript(MockBotoTestCase):
+class TestMainBootstrapScript(MockBotoTestCase):
 
     def test_usr_bin_env(self):
         runner = EMRJobRunner(conf_paths=[],
@@ -1696,15 +1696,15 @@ class TestMasterBootstrapScript(MockBotoTestCase):
 
         runner._add_bootstrap_files_for_upload()
 
-        self.assertIsNotNone(runner._master_bootstrap_script_path)
-        self.assertTrue(os.path.exists(runner._master_bootstrap_script_path))
+        self.assertIsNotNone(runner._main_bootstrap_script_path)
+        self.assertTrue(os.path.exists(runner._main_bootstrap_script_path))
 
-        with open(runner._master_bootstrap_script_path) as f:
+        with open(runner._main_bootstrap_script_path) as f:
             lines = [line.rstrip() for line in f]
 
         self.assertEqual(lines[0], '#!/usr/bin/env bash -e')
 
-    def test_create_master_bootstrap_script(self):
+    def test_create_main_bootstrap_script(self):
         # create a fake src tarball
         foo_py_path = os.path.join(self.tmp_dir, 'foo.py')
         with open(foo_py_path, 'w'):
@@ -1727,10 +1727,10 @@ class TestMasterBootstrapScript(MockBotoTestCase):
 
         runner._add_bootstrap_files_for_upload()
 
-        self.assertIsNotNone(runner._master_bootstrap_script_path)
-        self.assertTrue(os.path.exists(runner._master_bootstrap_script_path))
+        self.assertIsNotNone(runner._main_bootstrap_script_path)
+        self.assertTrue(os.path.exists(runner._main_bootstrap_script_path))
 
-        with open(runner._master_bootstrap_script_path) as f:
+        with open(runner._main_bootstrap_script_path) as f:
             lines = [line.rstrip() for line in f]
 
         self.assertEqual(lines[0], '#!/bin/sh -ex')
@@ -1792,9 +1792,9 @@ class TestMasterBootstrapScript(MockBotoTestCase):
                               bootstrap_python=False)
 
         runner._add_bootstrap_files_for_upload()
-        self.assertIsNone(runner._master_bootstrap_script_path)
+        self.assertIsNone(runner._main_bootstrap_script_path)
 
-        # bootstrap actions don't figure into the master bootstrap script
+        # bootstrap actions don't figure into the main bootstrap script
         runner = EMRJobRunner(conf_paths=[],
                               bootstrap_mrjob=False,
                               bootstrap_actions=['foo', 'bar baz'],
@@ -1802,7 +1802,7 @@ class TestMasterBootstrapScript(MockBotoTestCase):
                               pool_emr_job_flows=False)
 
         runner._add_bootstrap_files_for_upload()
-        self.assertIsNone(runner._master_bootstrap_script_path)
+        self.assertIsNone(runner._main_bootstrap_script_path)
 
         # using pooling doesn't require us to create a bootstrap script
         runner = EMRJobRunner(conf_paths=[],
@@ -1811,7 +1811,7 @@ class TestMasterBootstrapScript(MockBotoTestCase):
                               pool_emr_job_flows=True)
 
         runner._add_bootstrap_files_for_upload()
-        self.assertIsNone(runner._master_bootstrap_script_path)
+        self.assertIsNone(runner._main_bootstrap_script_path)
 
     def test_bootstrap_actions_get_added(self):
         bootstrap_actions = [
@@ -1843,13 +1843,13 @@ class TestMasterBootstrapScript(MockBotoTestCase):
         self.assertEqual(actions[1].args, [])
         self.assertEqual(actions[1].name, 'action 1')
 
-        # check for master bootstrap script
+        # check for main bootstrap script
         self.assertTrue(actions[2].scriptpath.startswith('s3://mrjob-'))
         self.assertTrue(actions[2].scriptpath.endswith('b.py'))
         self.assertEqual(actions[2].args, [])
-        self.assertEqual(actions[2].name, 'master')
+        self.assertEqual(actions[2].name, 'main')
 
-        # make sure master bootstrap script is on S3
+        # make sure main bootstrap script is on S3
         self.assertTrue(runner.fs.exists(actions[2].scriptpath))
 
     def test_bootstrap_mrjob_uses_python_bin(self):
@@ -1859,8 +1859,8 @@ class TestMasterBootstrapScript(MockBotoTestCase):
                               python_bin=['anaconda'])
 
         runner._add_bootstrap_files_for_upload()
-        self.assertIsNotNone(runner._master_bootstrap_script_path)
-        with open(runner._master_bootstrap_script_path, 'r') as f:
+        self.assertIsNotNone(runner._main_bootstrap_script_path)
+        with open(runner._main_bootstrap_script_path, 'r') as f:
             content = f.read()
 
         self.assertIn('sudo anaconda -m compileall -f', content)
@@ -1891,13 +1891,13 @@ class TestMasterBootstrapScript(MockBotoTestCase):
         self.assertEqual(actions[0].args[0].value, 'python-scipy')
         self.assertEqual(actions[0].args[1].value, 'mysql-server')
 
-        # check for master boostrap script
+        # check for main boostrap script
         self.assertTrue(actions[1].scriptpath.startswith('s3://mrjob-'))
         self.assertTrue(actions[1].scriptpath.endswith('b.py'))
         self.assertEqual(actions[1].args, [])
-        self.assertEqual(actions[1].name, 'master')
+        self.assertEqual(actions[1].name, 'main')
 
-        # make sure master bootstrap script is on S3
+        # make sure main bootstrap script is on S3
         self.assertTrue(runner.fs.exists(actions[1].scriptpath))
 
 
@@ -2181,13 +2181,13 @@ class PoolMatchingTestCase(MockBotoTestCase):
             '--ec2-instance-type', 'm2.4xlarge',
             '--num-ec2-instances', '2'])
 
-    def test_master_instance_has_to_be_big_enough(self):
+    def test_main_instance_has_to_be_big_enough(self):
         _, cluster_id = self.make_pooled_cluster(
             ec2_instance_type='c1.xlarge',
             num_ec2_instances=10)
 
         # We implicitly want a MASTER instance with c1.xlarge. The pooled
-        # job flow has an m1.medium master instance and 9 c1.xlarge core
+        # job flow has an m1.medium main instance and 9 c1.xlarge core
         # instances, which doesn't match.
         self.assertDoesNotJoin(cluster_id, [
             '-r', 'emr', '-v', '--pool-emr-job-flows',
@@ -2238,39 +2238,39 @@ class PoolMatchingTestCase(MockBotoTestCase):
 
     def test_can_join_cluster_with_same_bid_price(self):
         _, cluster_id = self.make_pooled_cluster(
-            ec2_master_instance_bid_price='0.25')
+            ec2_main_instance_bid_price='0.25')
 
         self.assertJoins(cluster_id, [
             '-r', 'emr', '-v', '--pool-emr-job-flows',
-            '--ec2-master-instance-bid-price', '0.25'])
+            '--ec2-main-instance-bid-price', '0.25'])
 
     def test_can_join_cluster_with_higher_bid_price(self):
         _, cluster_id = self.make_pooled_cluster(
-            ec2_master_instance_bid_price='25.00')
+            ec2_main_instance_bid_price='25.00')
 
         self.assertJoins(cluster_id, [
             '-r', 'emr', '-v', '--pool-emr-job-flows',
-            '--ec2-master-instance-bid-price', '0.25'])
+            '--ec2-main-instance-bid-price', '0.25'])
 
     def test_cant_join_cluster_with_lower_bid_price(self):
         _, cluster_id = self.make_pooled_cluster(
-            ec2_master_instance_bid_price='0.25',
+            ec2_main_instance_bid_price='0.25',
             num_ec2_instances=100)
 
         self.assertDoesNotJoin(cluster_id, [
             '-r', 'emr', '-v', '--pool-emr-job-flows',
-            '--ec2-master-instance-bid-price', '25.00'])
+            '--ec2-main-instance-bid-price', '25.00'])
 
     def test_on_demand_satisfies_any_bid_price(self):
         _, cluster_id = self.make_pooled_cluster()
 
         self.assertJoins(cluster_id, [
             '-r', 'emr', '-v', '--pool-emr-job-flows',
-            '--ec2-master-instance-bid-price', '25.00'])
+            '--ec2-main-instance-bid-price', '25.00'])
 
     def test_no_bid_price_satisfies_on_demand(self):
         _, cluster_id = self.make_pooled_cluster(
-            ec2_master_instance_bid_price='25.00')
+            ec2_main_instance_bid_price='25.00')
 
         self.assertDoesNotJoin(cluster_id, [
             '-r', 'emr', '-v', '--pool-emr-job-flows'])
@@ -2289,7 +2289,7 @@ class PoolMatchingTestCase(MockBotoTestCase):
             '--num-ec2-core-instances', '2',
             '--num-ec2-task-instances', '10',  # more instances, but smaller
             '--ec2-core-instance-bid-price', '0.10',
-            '--ec2-master-instance-bid-price', '77.77',
+            '--ec2-main-instance-bid-price', '77.77',
             '--ec2-task-instance-bid-price', '22.00'])
 
     def test_dont_join_full_cluster(self):
@@ -2737,7 +2737,7 @@ class TestCatFallback(MockBotoTestCase):
     def test_ssh_cat(self):
         runner = EMRJobRunner(conf_paths=[])
         self.prepare_runner_for_ssh(runner)
-        mock_ssh_file('testmaster', 'etc/init.d', b'meow')
+        mock_ssh_file('testmain', 'etc/init.d', b'meow')
 
         ssh_cat_gen = runner.fs.cat(
             SSH_PREFIX + runner._address + '/etc/init.d')
@@ -2752,7 +2752,7 @@ class TestCatFallback(MockBotoTestCase):
         self.prepare_runner_for_ssh(runner)
 
         error_message = b'cat: logs/err.log: No such file or directory\n'
-        mock_ssh_file('testmaster', 'logs/err.log', error_message)
+        mock_ssh_file('testmain', 'logs/err.log', error_message)
         self.assertEqual(
             list(runner.fs.cat(SSH_PREFIX + runner._address + '/logs/err.log')),
             [error_message])

@@ -83,13 +83,13 @@ _LOG_TYPE_TO_RE = dict(
 )
 
 # where to look for logs when SSHing in
-# (either 'master', 'slaves', or both)
+# (either 'main', 'subordinates', or both)
 _SSH_LOG_TYPE_TO_LOCATIONS = dict(
-    all=['master', 'slaves'],
-    job=['master'],
-    node=['slaves'],  # TODO: why not master?
-    step=['master'],
-    task=['master', 'slaves'],
+    all=['main', 'subordinates'],
+    job=['main'],
+    node=['subordinates'],  # TODO: why not main?
+    step=['main'],
+    task=['main', 'subordinates'],
 )
 
 log = getLogger(__name__)
@@ -115,7 +115,7 @@ def ls_logs(fs, log_type,
     :param log_dir: s3:// or hdfs:// URI to fetch logs from
     :param node_log_path: where on a node that we SSH into to look
                           for logs (defaults to
-    :param ssh_host: hostname of master node, to SSH into
+    :param ssh_host: hostname of main node, to SSH into
     :param step_nums: set of step nums to include
     :param step_num_to_id: map from step number to step ID (for EMR)
 
@@ -204,10 +204,10 @@ def _candidate_log_subdirs(fs, log_type, log_dir, node_log_path, ssh_host):
 
 def _ssh_log_subdirs(fs, log_type, ssh_host, node_log_path):
     """Return a list of SSH URIs where we can look for logs. Depending
-    on the log type, we may want to fetch logs from slave nodes
+    on the log type, we may want to fetch logs from subordinate nodes
     as well, which involves requesting their list of hostnames.
     """
-    # bail out if fs doesn't support it (fetching slave addresses would fail)
+    # bail out if fs doesn't support it (fetching subordinate addresses would fail)
     if not (ssh_host and fs.can_handle_path('ssh://%s/' % ssh_host)):
         return []
 
@@ -230,17 +230,17 @@ def _ssh_log_subdirs(fs, log_type, ssh_host, node_log_path):
 
     log_locations = _SSH_LOG_TYPE_TO_LOCATIONS.get(log_type, ())
 
-    if 'master' in log_locations:
+    if 'main' in log_locations:
         hosts.append(ssh_host)
 
-    if 'slaves' in log_locations:
+    if 'subordinates' in log_locations:
         try:
-            slave_hosts = fs.ssh_slave_hosts(ssh_host)
+            subordinate_hosts = fs.ssh_subordinate_hosts(ssh_host)
         except IOError:
-            log.warning('Could not get slave addresses for %s' % ssh_host)
+            log.warning('Could not get subordinate addresses for %s' % ssh_host)
         else:
-            for slave_host in slave_hosts:
-                hosts.append(ssh_host + '!' + slave_host)
+            for subordinate_host in subordinate_hosts:
+                hosts.append(ssh_host + '!' + subordinate_host)
 
     return ['ssh://%s%s' % (host, log_path) for host in hosts]
 

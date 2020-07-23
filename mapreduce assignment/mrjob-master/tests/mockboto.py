@@ -186,37 +186,37 @@ class MockBotoTestCase(SandboxedTestCase):
 
         self.mock_emr_clusters[cluster.id] = cluster
 
-    def prepare_runner_for_ssh(self, runner, num_slaves=0):
+    def prepare_runner_for_ssh(self, runner, num_subordinates=0):
         # TODO: Refactor this abomination of a test harness
 
         # Set up environment variables
         os.environ['MOCK_SSH_VERIFY_KEY_FILE'] = 'true'
 
         # Create temporary directories and add them to MOCK_SSH_ROOTS
-        master_ssh_root = tempfile.mkdtemp(prefix='master_ssh_root.')
-        os.environ['MOCK_SSH_ROOTS'] = 'testmaster=%s' % master_ssh_root
-        mock_ssh_dir('testmaster', SSH_LOG_ROOT + '/history')
+        main_ssh_root = tempfile.mkdtemp(prefix='main_ssh_root.')
+        os.environ['MOCK_SSH_ROOTS'] = 'testmain=%s' % main_ssh_root
+        mock_ssh_dir('testmain', SSH_LOG_ROOT + '/history')
 
-        if not hasattr(self, 'slave_ssh_roots'):
-            self.slave_ssh_roots = []
+        if not hasattr(self, 'subordinate_ssh_roots'):
+            self.subordinate_ssh_roots = []
 
-        self.addCleanup(self.teardown_ssh, master_ssh_root)
+        self.addCleanup(self.teardown_ssh, main_ssh_root)
 
         # Make the fake binary
-        os.mkdir(os.path.join(master_ssh_root, 'bin'))
-        self.ssh_bin = os.path.join(master_ssh_root, 'bin', 'ssh')
+        os.mkdir(os.path.join(main_ssh_root, 'bin'))
+        self.ssh_bin = os.path.join(main_ssh_root, 'bin', 'ssh')
         create_mock_ssh_script(self.ssh_bin)
 
         # Make a fake keyfile so that the 'file exists' requirements are
         # satsified
-        self.keyfile_path = os.path.join(master_ssh_root, 'key.pem')
+        self.keyfile_path = os.path.join(main_ssh_root, 'key.pem')
         with open(self.keyfile_path, 'w') as f:
             f.write('I AM DEFINITELY AN SSH KEY FILE')
 
         # Tell the runner to use the fake binary
         runner._opts['ssh_bin'] = [self.ssh_bin]
-        # Inject master node hostname so it doesn't try to 'emr --describe' it
-        runner._address = 'testmaster'
+        # Inject main node hostname so it doesn't try to 'emr --describe' it
+        runner._address = 'testmain'
         # Also pretend to have an SSH key pair file
         runner._opts['ec2_key_pair_file'] = self.keyfile_path
 
@@ -226,19 +226,19 @@ class MockBotoTestCase(SandboxedTestCase):
         runner._s3_fs = None
         #runner.fs
 
-    def add_slave(self):
-        """Add a mocked slave to the cluster. Caller is responsible for setting
+    def add_subordinate(self):
+        """Add a mocked subordinate to the cluster. Caller is responsible for setting
         runner._opts['num_ec2_instances'] to the correct number.
         """
-        slave_num = len(self.slave_ssh_roots)
-        new_dir = tempfile.mkdtemp(prefix='slave_%d_ssh_root.' % slave_num)
-        self.slave_ssh_roots.append(new_dir)
-        os.environ['MOCK_SSH_ROOTS'] += (':testmaster!testslave%d=%s'
-                                         % (slave_num, new_dir))
+        subordinate_num = len(self.subordinate_ssh_roots)
+        new_dir = tempfile.mkdtemp(prefix='subordinate_%d_ssh_root.' % subordinate_num)
+        self.subordinate_ssh_roots.append(new_dir)
+        os.environ['MOCK_SSH_ROOTS'] += (':testmain!testsubordinate%d=%s'
+                                         % (subordinate_num, new_dir))
 
-    def teardown_ssh(self, master_ssh_root):
-        shutil.rmtree(master_ssh_root)
-        for path in self.slave_ssh_roots:
+    def teardown_ssh(self, main_ssh_root):
+        shutil.rmtree(main_ssh_root)
+        for path in self.subordinate_ssh_roots:
             shutil.rmtree(path)
 
     def make_runner(self, *args):
@@ -667,8 +667,8 @@ class MockEmrConnection(object):
     def run_jobflow(self,
                     name, log_uri=None, ec2_keyname=None,
                     availability_zone=None,
-                    master_instance_type='m1.small',
-                    slave_instance_type='m1.small', num_instances=1,
+                    main_instance_type='m1.small',
+                    subordinate_instance_type='m1.small', num_instances=1,
                     action_on_failure='TERMINATE_CLUSTER', keep_alive=False,
                     enable_debugging=False,
                     hadoop_version=None,
@@ -786,7 +786,7 @@ class MockEmrConnection(object):
             id=cluster_id,
             loguri=log_uri,
             # TODO: set this later, once cluster is running
-            masterpublicdnsname='mockmaster',
+            mainpublicdnsname='mockmain',
             name=name,
             normalizedinstancehours='0',
             releaselabel=release_label,
@@ -822,7 +822,7 @@ class MockEmrConnection(object):
         else:
             cluster._instancegroups = (
                 self._build_instance_groups_from_type_and_count(
-                    master_instance_type, slave_instance_type, num_instances))
+                    main_instance_type, subordinate_instance_type, num_instances))
 
         # 3.x AMIs don't support m1.small
         if version_gte(ami_version, '3') and any(
@@ -910,12 +910,12 @@ class MockEmrConnection(object):
 
             roles.add(instance_group.role)
 
-            # check for multiple master instances
+            # check for multiple main instances
             if instance_group.role == 'MASTER':
                 if instance_group.num_instances != 1:
                     raise boto.exception.EmrResponseError(
                         400, 'Bad Request', body=err_xml(
-                            'A master instance group must specify a single'
+                            'A main instance group must specify a single'
                             ' instance'))
 
             # add mock instance group
@@ -932,14 +932,14 @@ class MockEmrConnection(object):
         if 'MASTER' not in roles:
             raise boto.exception.EmrResponseError(
                 400, 'Bad Request', body=err_xml(
-                    'Zero master instance groups supplied, you must'
-                    ' specify exactly one master instance group'))
+                    'Zero main instance groups supplied, you must'
+                    ' specify exactly one main instance group'))
 
         # Done!
         return mock_groups
 
     def _build_instance_groups_from_type_and_count(
-            self, master_instance_type, slave_instance_type, num_instances):
+            self, main_instance_type, subordinate_instance_type, num_instances):
 
         # going to pass this to _build_instance_groups_from_list()
         instance_groups = []
@@ -947,15 +947,15 @@ class MockEmrConnection(object):
         instance_groups.append(
             InstanceGroup(num_instances=1,
                           role='MASTER',
-                          type=master_instance_type,
+                          type=main_instance_type,
                           market='ON_DEMAND',
-                          name='master'))
+                          name='main'))
 
         if num_instances > 1:
             instance_groups.append(
                 InstanceGroup(num_instances=(num_instances - 1),
                               role='CORE',
-                              type=slave_instance_type,
+                              type=subordinate_instance_type,
                               market='ON_DEMAND',
                               name='core'))
 
